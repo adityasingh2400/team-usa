@@ -12,6 +12,7 @@ generative AI tools to inspect or transform Team USA athlete data.
 
 - `docs/data-sources.md`: curated source inventory with safety notes.
 - `docs/compliance-notes.md`: NIL, IP, terminology, and output constraints.
+- `docs/hackathon-faq-brief.md`: operational FAQ checklist for build decisions.
 - `data/source-manifest.yml`: machine-readable list of candidate sources.
 
 ## Strategic Direction
@@ -24,4 +25,3 @@ For a user-trait matcher, the safe version is an aggregate archetype tool:
 - Use conditional language such as "could align with", "historically appears
   near", or "may be associated with".
 - Keep Olympic and Paralympic representation equally prominent.
-

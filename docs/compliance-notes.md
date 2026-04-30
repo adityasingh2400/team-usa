@@ -54,3 +54,7 @@ data, keep this repository focused on:
 Do not paste athlete-level rows into prompts or use non-Google GenAI to analyze
 them.
 
+## Saved FAQ Brief
+
+See `docs/hackathon-faq-brief.md` for the build-facing FAQ checklist, including
+media, data, IP, terminology, deployment, judging, and sharing constraints.
