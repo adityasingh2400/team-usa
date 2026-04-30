@@ -1,0 +1,155 @@
+sources:
+  - id: hackathon_overview
+    name: Devpost hackathon overview
+    url: https://vibecodeforgoldwithgoogle.devpost.com/
+    category: rules
+    status: approved_reference
+    contains_athlete_level_data: false
+    allowed_use: Challenge requirements, judging criteria, submission shape.
+
+  - id: hackathon_rules
+    name: Devpost official rules
+    url: https://vibecodeforgoldwithgoogle.devpost.com/rules
+    category: rules
+    status: approved_reference
+    contains_athlete_level_data: false
+    allowed_use: Compliance constraints and judging rules.
+
+  - id: hackathon_faq
+    name: Devpost FAQ
+    url: https://vibecodeforgoldwithgoogle.devpost.com/details/faqs
+    category: rules
+    status: approved_reference
+    contains_athlete_level_data: false
+    allowed_use: NIL, GenAI, data, deployment, and sharing constraints.
+
+  - id: teamusa_athletes
+    name: Team USA athlete profile directory
+    url: https://www.teamusa.com/athletes
+    category: official_teamusa
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Internal aggregation only; no named-athlete public output.
+
+  - id: teamusa_paris_roster
+    name: Team USA Paris 2024 roster
+    url: https://www.teamusa.com/paris-2024/roster
+    category: official_teamusa
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Roster verification and aggregate sport/hometown counts.
+
+  - id: teamusa_map
+    name: Team USA hometown map
+    url: https://www.teamusa.com/map
+    category: official_teamusa
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Hometown aggregation and regional visualization.
+
+  - id: usopc_2024_olympic_roster_xlsx
+    name: 2024 U.S. Olympic Team roster XLSX
+    url: https://assets.contentstack.io/v3/assets/blt9e58afd92a18a0fc/bltfbab8d857574a719/672e564b824c1a33908da119/2024_U.S._Olympic_Team_610_Final.xlsx
+    category: official_usopc
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Aggregate Olympic roster counts by sport, event, state, and hometown.
+
+  - id: usopc_2024_paralympic_roster_xlsx
+    name: 2024 U.S. Paralympic Team roster XLSX
+    url: https://assets.contentstack.io/v3/assets/blt9e58afd92a18a0fc/bltb157d69d46ed67bc/66c3864688b74e0c81b14946/2024_Paralympic_Roster_State_Sport.xlsx
+    category: official_usopc
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Aggregate Paralympic roster counts by sport, state, and hometown.
+
+  - id: usopc_olympic_collegiate_sheet
+    name: Olympic collegiate qualified athlete raw sheet
+    url: https://docs.google.com/spreadsheets/d/1TWaLCMRl5REToxtywJj-0c76QGeAAifSphICTT9YFBo/edit#gid=0
+    category: official_usopc
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Aggregate college pathway and sport representation.
+
+  - id: usopc_paralympic_collegiate_sheet
+    name: Paralympic collegiate qualified athlete raw sheet
+    url: https://docs.google.com/spreadsheets/d/1RzHOuV4ClAfVAM10asbT3ELQ8w_I6lpeSwUniVuSYZ4/edit#gid=0
+    category: official_usopc
+    status: high_confidence_candidate
+    contains_athlete_level_data: true
+    allowed_use: Aggregate college pathway and Para sport representation.
+
+  - id: tidytuesday_olympics
+    name: TidyTuesday Olympics historical CSV
+    url: https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2021/2021-07-27/olympics.csv
+    category: open_source_historical
+    status: candidate_license_check_required
+    contains_athlete_level_data: true
+    allowed_use: Historical Olympic archetype modeling after filtering to United States rows.
+    prohibited_fields_for_output:
+      - name
+
+  - id: kaggle_120_years_olympic_history
+    name: Kaggle 120 years of Olympic history
+    url: https://www.kaggle.com/datasets/heesoo37/120-years-of-olympic-history-athletes-and-results
+    category: open_source_historical
+    status: candidate_license_check_required
+    contains_athlete_level_data: true
+    allowed_use: Original historical Olympic source; verify terms before redistribution.
+
+  - id: census_geocoder
+    name: U.S. Census geocoder
+    url: https://geocoding.geo.census.gov/geocoder/
+    category: public_geography
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Convert hometown city/state strings to coordinates/geographies.
+
+  - id: census_population_estimates
+    name: U.S. Census population estimates
+    url: https://www.census.gov/programs-surveys/popest.html
+    category: public_geography
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Per-capita denominators for regions and cities.
+
+  - id: census_tiger
+    name: Census TIGER/Line shapefiles
+    url: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+    category: public_geography
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Map boundaries.
+
+  - id: noaa_cdo
+    name: NOAA Climate Data Online
+    url: https://www.ncei.noaa.gov/cdo-web/
+    category: public_weather
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Public weather/climate features for hometown regions.
+
+  - id: noaa_climate_normals
+    name: NOAA U.S. climate normals
+    url: https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals
+    category: public_weather
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Long-run climate context.
+
+  - id: usgs_elevation
+    name: USGS Elevation Point Query Service
+    url: https://apps.nationalmap.gov/epqs/
+    category: public_geography
+    status: high_confidence_candidate
+    contains_athlete_level_data: false
+    allowed_use: Elevation context for hometowns.
+
+  - id: ipc_classification
+    name: IPC classification overview
+    url: https://www.paralympic.org/classification
+    category: classification_reference
+    status: candidate_reference_only
+    contains_athlete_level_data: false
+    allowed_use: Educational explanation of Paralympic classification concepts.
+
