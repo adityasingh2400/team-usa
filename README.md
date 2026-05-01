@@ -51,6 +51,10 @@ data/
   archetype-lookup.json  # ETL output: 5 archetypes with centroids and sport pairings
 etl/                     # Data pipeline (raw/ is gitignored)
 scripts/                 # Build-time tools (athlete name extractor for CI lint)
+docs/
+  data-sources.md        # Curated source inventory with safety notes
+  compliance-notes.md    # NIL, IP, terminology, and output constraints
+  hackathon-faq-brief.md # Operational FAQ checklist for build decisions
 ```
 
 ---
