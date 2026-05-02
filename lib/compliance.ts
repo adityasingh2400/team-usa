@@ -1,41 +1,39 @@
-/**
- * Runtime compliance scanner for Gemini output.
- * Owned by Shaurya. Aditya consumes ArchetypeMatch but does not modify this file.
- *
- * Scans narrativeBeats for banned phrases. Called by /api/match before returning.
- * If a hit is found, the route retries once, then accepts the fallback result.
- */
-
-const BANNED_PHRASES = [
-  // Athlete identity
-  /\b(former|current|past|retired)\s+(olympian|paralympian)\b/gi,
-  // Performance promises
-  /\byou (are|will be|would be|could be) (good|great|excellent|amazing|perfect|ideal) at\b/gi,
-  /\byou (are|will be) a (natural|champion)\b/gi,
-  // Absolute language (must stay conditional)
-  /\byou are most like\b/gi,
-  /\byou match\b/gi,
-  // NGB names
-  /\busa (swimming|track|gymnastics|archery|basketball)\b/gi,
-  // Prohibited org branding in text
-  /\b(usopc|ioc|la28)\b/gi,
+const bannedPatterns = [
+  /\bformer olympian\b/i,
+  /\bfuture olympian\b/i,
+  /\byou are most like\b/i,
+  /\bbody type means\b/i,
+  /\bwill be good at\b/i,
+  /\bguaranteed\b/i,
+  /\bteam usa logo\b/i,
+  /\bolympic rings\b/i,
+  /\bagitos\b/i,
+  /\btorch relay\b/i,
+  /\busa swimming\b/i,
+  /\busa basketball\b/i,
+  /\busa archery\b/i,
+  /\busa track\b/i
 ];
 
-export type ComplianceResult =
-  | { pass: true }
-  | { pass: false; hits: string[] };
+export type ComplianceResult = {
+  ok: boolean;
+  matches: string[];
+};
 
-export function scanOutput(beats: string[]): ComplianceResult {
-  const hits: string[] = [];
+export function scanTextForCompliance(text: string): ComplianceResult {
+  const matches = bannedPatterns
+    .filter((pattern) => pattern.test(text))
+    .map((pattern) => pattern.source.replaceAll("\\b", ""));
 
-  for (const beat of beats) {
-    for (const pattern of BANNED_PHRASES) {
-      const match = beat.match(pattern);
-      if (match) {
-        hits.push(`"${match[0]}" in: ${beat.slice(0, 80)}`);
-      }
-    }
+  return {
+    ok: matches.length === 0,
+    matches
+  };
+}
+
+export function assertCompliantText(text: string): void {
+  const result = scanTextForCompliance(text);
+  if (!result.ok) {
+    throw new Error(`Gemini output failed compliance scan: ${result.matches.join(", ")}`);
   }
-
-  return hits.length === 0 ? { pass: true } : { pass: false, hits };
 }

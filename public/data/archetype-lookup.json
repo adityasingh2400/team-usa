@@ -1,0 +1,134 @@
+{
+  "generatedFrom": "Hand-curated v1 aggregate lookup; roster ETL should replace aggregate counts once raw XLSX files are processed in the Google Cloud pipeline.",
+  "compliance": {
+    "publicOutput": "Aggregate archetypes only. No athlete names, photos, likenesses, finish times, or protected visual marks.",
+    "copyRule": "Use conditional language and keep Olympic and Paralympic sport pairings equally prominent."
+  },
+  "archetypes": [
+    {
+      "id": "striker",
+      "name": "The Striker",
+      "summary": "Quick decisions, clean angles, and a burst of team-first pressure.",
+      "sports": {
+        "olympic": "basketball",
+        "paralympic": "wheelchair basketball"
+      },
+      "measurementProfile": {
+        "heightCm": 188,
+        "weightKg": 84,
+        "wingspanCm": 196
+      },
+      "quizBias": [1, 0.25, 0.35, 0.2, 0.25],
+      "aggregateFacts": [
+        "Court-based Team USA pathways often reward spatial reads, repeat acceleration, and coordinated timing.",
+        "The paired Paralympic and Olympic court sports share tactical spacing while expressing movement through different mechanics."
+      ],
+      "narrativeBeats": [
+        "Your inputs could align with a court archetype built around anticipation and fast release.",
+        "This pairing keeps wheelchair basketball and basketball side by side as equal expressions of spacing, timing, and touch.",
+        "The Striker may be associated with movement that turns small openings into decisive chances.",
+        "Across Team USA history, court sports have often made teamwork visible through quick, repeatable choices."
+      ]
+    },
+    {
+      "id": "flow",
+      "name": "The Flow",
+      "summary": "Long rhythm, controlled breath, and efficient motion through resistance.",
+      "sports": {
+        "olympic": "swimming",
+        "paralympic": "para swimming"
+      },
+      "measurementProfile": {
+        "heightCm": 181,
+        "weightKg": 76,
+        "wingspanCm": 188
+      },
+      "quizBias": [0.2, 1, 0.35, 0.4, 0.2],
+      "aggregateFacts": [
+        "Aquatic Team USA pathways often center rhythm, body line, and repeat power.",
+        "The Paralympic and Olympic swim pairing gives equal analytical depth to pace, water feel, and controlled momentum."
+      ],
+      "narrativeBeats": [
+        "Your profile could align with a water archetype where rhythm matters as much as force.",
+        "This pairing treats para swimming and swimming as parallel studies in pace, line, and adaptation.",
+        "The Flow may be associated with calm repetition under pressure.",
+        "Team USA aquatic history offers a deep lane for stories about breath, timing, and sustained speed."
+      ]
+    },
+    {
+      "id": "spring",
+      "name": "The Spring",
+      "summary": "Coiled starts, fast turnover, and a clean shift from stillness to speed.",
+      "sports": {
+        "olympic": "track sprint",
+        "paralympic": "para athletics sprint"
+      },
+      "measurementProfile": {
+        "heightCm": 176,
+        "weightKg": 72,
+        "wingspanCm": 179
+      },
+      "quizBias": [0.25, 0.25, 1, 0.45, 0.15],
+      "aggregateFacts": [
+        "Sprint pathways often emphasize acceleration, stiffness, turnover, and finish-line composure.",
+        "The Paralympic and Olympic sprint pairing keeps explosive track movement structurally balanced."
+      ],
+      "narrativeBeats": [
+        "Your inputs could align with an acceleration archetype: compact, reactive, and ready to go.",
+        "This pairing puts para athletics sprint and track sprint in the same spotlight for power, timing, and control.",
+        "The Spring may be associated with starts that convert patience into speed.",
+        "Team USA sprint stories often turn a fraction of a second into a full-body decision."
+      ]
+    },
+    {
+      "id": "aim",
+      "name": "The Aim",
+      "summary": "Quiet posture, steady hands, and precision under rising pressure.",
+      "sports": {
+        "olympic": "archery",
+        "paralympic": "para archery"
+      },
+      "measurementProfile": {
+        "heightCm": 172,
+        "weightKg": 68,
+        "wingspanCm": 174
+      },
+      "quizBias": [0.1, 0.3, 0.15, 1, 0.25],
+      "aggregateFacts": [
+        "Precision pathways often reward stillness, repeatable setup, and calm execution.",
+        "The para archery and archery pairing highlights control and focus with equivalent visual importance."
+      ],
+      "narrativeBeats": [
+        "Your profile could align with a precision archetype where restraint is part of the power.",
+        "This pairing gives para archery and archery equal weight as sports of setup, hold, and release.",
+        "The Aim may be associated with pressure management and repeatable mechanics.",
+        "Team USA precision stories often live in the quiet seconds before motion."
+      ]
+    },
+    {
+      "id": "launch",
+      "name": "The Launch",
+      "summary": "Grounded force, rotational power, and the confidence to let it fly.",
+      "sports": {
+        "olympic": "shot put / throws",
+        "paralympic": "para shot put / throws"
+      },
+      "measurementProfile": {
+        "heightCm": 190,
+        "weightKg": 103,
+        "wingspanCm": 196
+      },
+      "quizBias": [0.35, 0.15, 0.3, 0.25, 1],
+      "aggregateFacts": [
+        "Throwing pathways often center leverage, ground force, and controlled release.",
+        "The para throws and Olympic throws pairing keeps power events represented with equal depth."
+      ],
+      "narrativeBeats": [
+        "Your inputs could align with a power archetype that builds force from the ground up.",
+        "This pairing treats para shot put and Olympic throws as equal studies in leverage, rotation, and release.",
+        "The Launch may be associated with patient setup and sudden transfer.",
+        "Team USA throwing stories often make strength visible as timing, not just size."
+      ]
+    }
+  ]
+}

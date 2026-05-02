@@ -1,180 +1,214 @@
-import { SchemaType, VertexAI } from '@google-cloud/vertexai';
-import { z } from 'zod';
-import { centroidFallback } from '@/lib/fallback';
-import type { ArchetypeMatch, UserInput } from '@/lib/types';
+import { z } from "zod";
+import { fallbackMatch } from "@/lib/archetypes";
+import { assertCompliantText, scanTextForCompliance } from "@/lib/compliance";
+import { quizAnswersToVector } from "@/lib/quiz";
+import type { ArchetypeMatch, UserInput } from "@/lib/types";
 
-const PROJECT = process.env.GCP_PROJECT_ID;
-const LOCATION = process.env.GCP_LOCATION ?? 'us-central1';
-const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-pro';
-const TIMEOUT_MS = 12_000;
+const archetypeIdSchema = z.enum(["striker", "flow", "spring", "aim", "launch"]);
 
-// Lazy-init: don't blow up at import time if env vars are missing in dev.
-function getVertex(): VertexAI {
-  if (!PROJECT) throw new Error('GCP_PROJECT_ID env var is required');
-  return new VertexAI({ project: PROJECT, location: LOCATION });
-}
-
-const SYSTEM_PREAMBLE = `You are a sports archetype classifier for a Team USA fan experience.
-
-COMPLIANCE RULES — follow exactly:
-- Do NOT output any athlete name, image description, or individual likeness.
-- Do NOT make performance promises or use language like "you will be good at" or "you are a natural".
-- Use conditional language only: "could align with", "may be associated with", "historically appears near".
-- Olympic and Paralympic sport pairings must receive equal narrative weight.
-- Paralympic sport must appear first in the narrativeBeats array.
-- Do NOT reference finish times, specific scores, or individual competition results.
-- Do NOT use the phrase "former Olympian" or "former Paralympian".
-- Do NOT use NGB names (e.g., "USA Swimming"). Use generic sport names (e.g., "swimming").
-- Do NOT output any USOPC, IOC, or LA28 branding or logo descriptions.
-- isFallback must always be false. The API sets it to true only when using the fallback path.`;
-
-const RESPONSE_SCHEMA = {
-  type: SchemaType.OBJECT,
-  required: ['archetype', 'olympicSport', 'paralympicSport', 'narrativeBeats', 'quizVector', 'confidence', 'isFallback'] as string[],
-  properties: {
-    archetype: {
-      type: SchemaType.STRING,
-      enum: ['striker', 'flow', 'spring', 'aim', 'launch'],
-    },
-    olympicSport:    { type: SchemaType.STRING },
-    paralympicSport: { type: SchemaType.STRING },
-    narrativeBeats: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING },
-      minItems: 4,
-      maxItems: 6,
-    },
-    quizVector: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.NUMBER },
-      minItems: 5,
-      maxItems: 5,
-    },
-    confidence: {
-      type: SchemaType.NUMBER,
-      minimum: 0,
-      maximum: 1,
-    },
-    isFallback: { type: SchemaType.BOOLEAN },
-  },
-};
-
-const GeminiResponseSchema = z.object({
-  archetype: z.enum(['striker', 'flow', 'spring', 'aim', 'launch']),
-  olympicSport:    z.string().min(1),
-  paralympicSport: z.string().min(1),
-  narrativeBeats:  z.array(z.string().min(1)).min(4).max(6),
-  quizVector:      z.array(z.number()).length(5),
-  confidence:      z.number().min(0).max(1),
-  isFallback:      z.boolean(),
+export const userInputSchema = z.object({
+  heightCm: z.number().min(90).max(240),
+  weightKg: z.number().min(25).max(250),
+  wingspanCm: z.number().min(80).max(260).optional(),
+  quiz: z.record(z.string()),
+  silhouettePng: z.string().startsWith("data:image/png;base64,").optional(),
+  webcamStatus: z.enum(["granted", "denied", "skipped"]).optional()
 });
 
-class TimeoutError extends Error {
-  constructor() { super('TIMEOUT'); }
-}
+export const archetypeMatchSchema = z.object({
+  archetype: archetypeIdSchema,
+  sports: z.object({
+    olympic: z.string().min(2),
+    paralympic: z.string().min(2)
+  }),
+  narrativeBeats: z.array(z.string().min(8)).min(4).max(6),
+  quizVector: z.array(z.number()).length(5),
+  confidence: z.number().min(0).max(1),
+  isFallback: z.boolean()
+});
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new TimeoutError()), ms)
-    ),
-  ]);
-}
+type ProviderResponse = string | ArchetypeMatch;
 
-function buildUserParts(input: UserInput) {
-  const lines = [
-    'Classify this user into one of five Team USA archetypes.',
-    '',
-    'Physical inputs:',
-    `- Height: ${input.heightCm} cm`,
-    `- Weight: ${input.weightKg} kg`,
-    ...(input.wingspanCm ? [`- Wingspan: ${input.wingspanCm} cm`] : []),
-    '',
-    'Quiz vector (each value 0.0–1.0):',
-    `- teamVsSolo: ${input.quiz.teamVsSolo}`,
-    `- enduranceVsExplosive: ${input.quiz.enduranceVsExplosive}`,
-    `- precisionVsPower: ${input.quiz.precisionVsPower}`,
-    `- waterVsLand: ${input.quiz.waterVsLand}`,
-    `- strategistVsReactor: ${input.quiz.strategistVsReactor}`,
-    '',
-    'Archetypes and centroids:',
-    '- striker: basketball / wheelchair basketball. Centroid: 195 cm / 95 kg.',
-    '- flow: swimming / para swimming. Centroid: 182 cm / 74 kg.',
-    '- spring: track and field sprints / para athletics sprints. Centroid: 178 cm / 70 kg.',
-    '- aim: archery / para archery. Centroid: 172 cm / 68 kg.',
-    '- launch: shot put and throws / para shot put and throws. Centroid: 185 cm / 105 kg.',
-  ];
+export type GeminiProvider = (input: UserInput, prompt: string) => Promise<ProviderResponse>;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = [{ text: lines.join('\n') }];
+type MatchOptions = {
+  provider?: GeminiProvider;
+  timeoutMs?: number;
+};
 
-  if (input.silhouettePng) {
-    parts.push({
-      inlineData: {
-        mimeType: 'image/png',
-        data: input.silhouettePng,
-      },
-    });
+const defaultTimeoutMs = 15_000;
+
+export async function matchArchetype(input: UserInput, options: MatchOptions = {}): Promise<ArchetypeMatch> {
+  const parsedInput = userInputSchema.parse(input);
+  const provider = options.provider ?? createVertexProvider();
+  const timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
+
+  if (!provider) {
+    return fallbackMatch(parsedInput);
   }
 
-  return parts;
-}
+  const prompt = buildMatchPrompt(parsedInput);
 
-async function callGemini(input: UserInput): Promise<ArchetypeMatch> {
-  const model = getVertex().preview.getGenerativeModel({
-    model: MODEL,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: RESPONSE_SCHEMA,
-    },
-    systemInstruction: {
-      role: 'system',
-      parts: [{ text: SYSTEM_PREAMBLE }],
-    },
-  });
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: buildUserParts(input) }],
-  });
-
-  const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty Gemini response');
-
-  const parsed = GeminiResponseSchema.parse(JSON.parse(text));
-
-  return {
-    archetype: parsed.archetype,
-    sports: { olympic: parsed.olympicSport, paralympic: parsed.paralympicSport },
-    narrativeBeats: parsed.narrativeBeats,
-    quizVector: parsed.quizVector,
-    confidence: parsed.confidence,
-    isFallback: false,
-  };
-}
-
-/**
- * Match a user to a Team USA archetype via Vertex AI Gemini.
- *
- * Fallback contract:
- * - Timeout (>12s)          → centroid fallback immediately, no retry.
- * - JSON/Zod parse failure  → retry once, then centroid fallback.
- */
-export async function matchArchetype(input: UserInput): Promise<ArchetypeMatch> {
-  // Attempt 1
   try {
-    return await withTimeout(callGemini(input), TIMEOUT_MS);
-  } catch (e) {
-    if (e instanceof TimeoutError) {
-      return centroidFallback(input);
+    const first = await runWithTimeout(provider(parsedInput, prompt), timeoutMs);
+    return parseAndValidateProviderResponse(first, parsedInput);
+  } catch (error) {
+    if (isComplianceError(error)) {
+      try {
+        const retry = await runWithTimeout(provider(parsedInput, `${prompt}\n\nRevise once for compliance.`), timeoutMs);
+        return parseAndValidateProviderResponse(retry, parsedInput);
+      } catch {
+        return fallbackMatch(parsedInput);
+      }
     }
-    // Parse failure — fall through to retry
+
+    if (isParseError(error)) {
+      try {
+        const retry = await runWithTimeout(provider(parsedInput, `${prompt}\n\nReturn only valid JSON.`), timeoutMs);
+        return parseAndValidateProviderResponse(retry, parsedInput);
+      } catch {
+        return fallbackMatch(parsedInput);
+      }
+    }
+
+    return fallbackMatch(parsedInput);
+  }
+}
+
+function parseAndValidateProviderResponse(response: ProviderResponse, input: UserInput): ArchetypeMatch {
+  const parsedJson = providerResponseSchema.parse(typeof response === "string" ? parseJson(response) : response);
+  const candidate = archetypeMatchSchema.parse({
+    ...parsedJson,
+    quizVector: parsedJson.quizVector?.length === 5 ? parsedJson.quizVector : quizAnswersToVector(input.quiz),
+    isFallback: false
+  });
+
+  assertCompliantText(JSON.stringify(candidate));
+  return candidate;
+}
+
+const providerResponseSchema = z.object({
+  archetype: archetypeIdSchema,
+  sports: z.object({
+    olympic: z.string(),
+    paralympic: z.string()
+  }),
+  narrativeBeats: z.array(z.string()),
+  quizVector: z.array(z.number()).optional(),
+  confidence: z.number(),
+  isFallback: z.boolean().optional()
+});
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const parseError = new Error("Invalid JSON returned by Gemini");
+    parseError.cause = error;
+    parseError.name = "GeminiParseError";
+    throw parseError;
+  }
+}
+
+async function runWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      const error = new Error("Gemini match timed out");
+      error.name = "GeminiTimeoutError";
+      reject(error);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+function isParseError(error: unknown): boolean {
+  return error instanceof Error && (error.name === "GeminiParseError" || error instanceof z.ZodError);
+}
+
+function isComplianceError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("compliance");
+}
+
+function buildMatchPrompt(input: UserInput): string {
+  return `You are matching a fan to one movement archetype for a Team USA x Google Cloud hackathon demo.
+
+Compliance rules:
+- Do not name real athletes.
+- Do not mention athlete likeness, photos, or protected marks.
+- Use conditional phrasing such as "could align with" or "may be associated with".
+- Keep Paralympic and Olympic sports equally prominent.
+- Do not claim the user will be good at a sport.
+
+Return only JSON matching this schema:
+{
+  "archetype": "striker|flow|spring|aim|launch",
+  "sports": { "olympic": "string", "paralympic": "string" },
+  "narrativeBeats": ["4 to 6 short compliant strings"],
+  "quizVector": [number, number, number, number, number],
+  "confidence": number,
+  "isFallback": false
+}
+
+User input:
+${JSON.stringify(
+  {
+    heightCm: input.heightCm,
+    weightKg: input.weightKg,
+    wingspanCm: input.wingspanCm,
+    quiz: input.quiz,
+    hasSilhouette: Boolean(input.silhouettePng)
+  },
+  null,
+  2
+)}`;
+}
+
+function createVertexProvider(): GeminiProvider | undefined {
+  const project = process.env.GOOGLE_CLOUD_PROJECT;
+  const location = process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1";
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-pro";
+
+  if (!project) {
+    return undefined;
   }
 
-  // Attempt 2 (retry on parse failure only)
-  try {
-    return await withTimeout(callGemini(input), TIMEOUT_MS);
-  } catch {
-    return centroidFallback(input);
-  }
+  return async (input, prompt) => {
+    const { VertexAI } = await import("@google-cloud/vertexai");
+    const vertexAI = new VertexAI({ project, location });
+    const generativeModel = vertexAI.getGenerativeModel({
+      model,
+      generationConfig: {
+        temperature: 0.35,
+        responseMimeType: "application/json"
+      }
+    });
+
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: prompt }];
+    if (input.silhouettePng) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: input.silhouettePng.replace("data:image/png;base64,", "")
+        }
+      });
+    }
+
+    const result = await generativeModel.generateContent({
+      contents: [{ role: "user", parts }]
+    });
+    const text = result.response.candidates?.[0]?.content.parts?.map((part) => "text" in part ? part.text : "").join("") ?? "";
+    const compliance = scanTextForCompliance(text);
+    if (!compliance.ok) {
+      throw new Error(`Gemini output failed compliance scan: ${compliance.matches.join(", ")}`);
+    }
+    return text;
+  };
 }

@@ -1,173 +1,90 @@
 # Become Team USA
 
-A Team USA x Google Cloud Hackathon entry.
+This repository now contains the first playable slice of the Team USA x Google
+Cloud hackathon entry: Shaurya's onboarding engine for the Athlete Archetype
+Agent challenge.
 
-Enter your physical stats and answer five questions about your athletic style. Google Gemini AI matches you to one of five Team USA sport archetypes — each with an equal Olympic and Paralympic pairing — and generates a personalized narrative about why you fit that archetype.
+The first rule of the repo still applies: raw athlete-level data should only be
+processed by the final Google Cloud/Gemini pipeline. Public UI and committed
+data stay aggregate-only.
 
-**Deadline: May 11, 2026**
+## Current App
 
----
+- Next.js 15 App Router, React 19, TypeScript strict, Tailwind 4.
+- Vibe quiz with typed config in `lib/quiz.ts`.
+- Measurement input with metric/imperial conversion and validation.
+- Optional webcam silhouette capture that uses browser BlazePose keypoints,
+  draws an abstract black/white canvas PNG, and falls back to measurements when
+  camera access is denied or skipped.
+- `POST /api/match` route that returns the shared `ArchetypeMatch` contract.
+- Gemini/Vertex AI provider hook with timeout, invalid JSON retry, compliance
+  retry, and deterministic nearest-neighbor fallback.
+- Reveal screen with Paralympic sport shown first and the Olympic sport given
+  equivalent visual weight.
+- `/moment` placeholder route for Aditya's handoff.
 
-## Archetypes
+## Frontend Status
 
-| ID | Olympic | Paralympic | Centroid |
-|----|---------|------------|---------|
-| `striker` | Basketball | Wheelchair basketball | 195 cm / 95 kg |
-| `flow` | Swimming | Para swimming | 182 cm / 74 kg |
-| `spring` | Track sprints | Para athletics sprints | 178 cm / 70 kg |
-| `aim` | Archery | Para archery | 172 cm / 68 kg |
-| `launch` | Shot put & throws | Para shot put & throws | 185 cm / 105 kg |
+Only Shaurya's onboarding frontend is implemented right now: landing, quiz,
+measurement input, optional silhouette capture, loading, and archetype reveal.
+The post-reveal frontend is not built yet. Aditya still owns the moment engine,
+pose-triggered sport videos, narrative screen, and share card.
 
----
-
-## Tech Stack
-
-- **Framework**: Next.js 15 (App Router, TypeScript strict)
-- **Styling**: Tailwind CSS
-- **AI**: Vertex AI Gemini 2.5 Pro via `@google-cloud/vertexai`
-- **Validation**: Zod
-- **Silhouette**: MediaPipe BlazePose (browser WASM, lazy-loaded)
-- **Deployment**: Google Cloud Run (us-central1)
-
----
-
-## Project Structure
-
-```
-app/
-  page.tsx               # Landing
-  quiz/                  # Quiz screen
-  measure/               # Height / weight + optional silhouette capture
-  reveal/                # Archetype reveal (hands off to Aditya's moment engine)
-  api/match/route.ts     # POST /api/match — core Gemini endpoint
-lib/
-  types.ts               # Shared contract: UserInput, ArchetypeMatch, etc.
-  gemini.ts              # Vertex AI client + timeout/retry/fallback logic
-  fallback.ts            # Centroid nearest-neighbor fallback (no Gemini needed)
-  compliance.ts          # Runtime scanner for banned phrases in Gemini output
-prompts/
-  archetype-match.md     # Prompt template with compliance preamble + response_schema
-data/
-  archetype-lookup.json  # ETL output: 5 archetypes with centroids and sport pairings
-etl/                     # Data pipeline (raw/ is gitignored)
-scripts/                 # Build-time tools (athlete name extractor for CI lint)
-docs/
-  data-sources.md        # Curated source inventory with safety notes
-  compliance-notes.md    # NIL, IP, terminology, and output constraints
-  hackathon-faq-brief.md # Operational FAQ checklist for build decisions
-```
-
----
-
-## Getting Started
-
-### 1. Install dependencies
+## Local Setup
 
 ```bash
 npm install
-```
-
-### 2. Set up environment variables
-
-```bash
-cp env.example .env.local
-# Fill in GCP_PROJECT_ID in .env.local
-```
-
-### 3. Authenticate with Google Cloud
-
-```bash
-gcloud auth application-default login
-```
-
-### 4. Run the dev server
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open `http://localhost:3000`.
 
----
+## Verification
 
-## API
-
-### `POST /api/match`
-
-Match a user to a Team USA archetype.
-
-**Request body:**
-
-```json
-{
-  "heightCm": 183,
-  "weightKg": 78,
-  "wingspanCm": 185,
-  "quiz": {
-    "teamVsSolo": 0.7,
-    "enduranceVsExplosive": 0.3,
-    "precisionVsPower": 0.4,
-    "waterVsLand": 0.8,
-    "strategistVsReactor": 0.5
-  },
-  "silhouettePng": "<base64 PNG, optional>",
-  "webcamDenied": false
-}
+```bash
+npm run typecheck
+npm run lint
+npm run test
+npm run build
 ```
 
-**Response:**
+## Environment Variables
 
-```json
-{
-  "archetype": "flow",
-  "sports": {
-    "olympic": "swimming",
-    "paralympic": "para swimming"
-  },
-  "narrativeBeats": [
-    "Your inputs could align with para swimming pathways historically represented in Team USA.",
-    "..."
-  ],
-  "quizVector": [0.7, 0.3, 0.4, 0.8, 0.5],
-  "confidence": 0.84,
-  "isFallback": false
-}
+The app works locally without Vertex AI by using the deterministic fallback
+matcher. To enable Gemini matching, configure Google auth and set:
+
+```bash
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+GEMINI_MODEL=gemini-2.5-pro
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
 ```
 
-`isFallback: true` means Gemini timed out or failed and the centroid fallback was used.
+## Handoff To Aditya
 
----
+Shaurya's owned flow ends when `RevealStep` receives a populated
+`ArchetypeMatch` object from `/api/match`.
 
-## Fallback Behavior
+The shared contract lives in `lib/types.ts`:
 
-- **Gemini timeout (>12s)**: falls back to centroid immediately, no retry.
-- **JSON / Zod parse failure**: retries once, then falls back to centroid.
-- **Compliance scan hit**: retries once, then falls back to centroid.
+- `ArchetypeMatch`
+- `UserInput`
+- `QuizAnswers`
+- `SportPairing`
+- `ArchetypeId`
 
-Users never see an error screen.
+Aditya should replace `app/moment/page.tsx` with the moment engine and consume
+the reveal result from client state, URL/session storage, or a shared flow store.
+Do not change `lib/types.ts` without coordinating because it is the handoff
+boundary from `docs/plan/work-split.md`.
 
----
+## Planning And Data Governance
 
-## Compliance
-
-This project follows the Team USA x Google Cloud Hackathon rules:
-
-- No athlete names, photos, or likenesses in any output.
-- All generative AI processing uses Google Cloud (Vertex AI / Gemini). Non-Google GenAI tools do not process Team USA data.
-- Output uses conditional language only: "could align with", "may be associated with", "historically appears near".
-- Olympic and Paralympic pairings receive equal representation in every archetype.
-- Licensed under Apache 2.0.
-
----
-
-## Google Cloud Usage
-
-- **Vertex AI** (`us-central1`): Gemini 2.5 Pro powers the archetype match and generates narrative beats.
-- **Cloud Run**: production deployment target.
-- Proof of Google Cloud usage: see `lib/gemini.ts` (Vertex AI SDK calls) and `env.example`.
-
----
-
-## License
-
-Apache 2.0
+- `docs/plan/become-team-usa-design-doc.md`: product, flow, stack, compliance,
+  deadline, and demo priorities.
+- `docs/plan/work-split.md`: ownership split, handoff boundary, shared types,
+  and definition of done.
+- `docs/data-sources.md`: curated source inventory with safety notes.
+- `docs/compliance-notes.md`: NIL, IP, terminology, and output constraints.
+- `docs/hackathon-faq-brief.md`: operational FAQ checklist for build decisions.
+- `data/source-manifest.yml`: machine-readable list of candidate sources.
