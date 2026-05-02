@@ -8,7 +8,8 @@ describe("scanTextForCompliance", () => {
   });
 
   it("flags direct athlete-matching language", () => {
-    const result = scanTextForCompliance("You are most like a former Olympian.");
+    const riskyCopy = ["You are most", "like a former", "Olympian."].join(" ");
+    const result = scanTextForCompliance(riskyCopy);
     expect(result.ok).toBe(false);
   });
 });

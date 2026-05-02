@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { getArchetype } from "@/lib/archetypes";
+import { revealHandoffStorageKey } from "@/lib/handoff";
 import type { ArchetypeMatch } from "@/lib/types";
 
 type RevealStepProps = {
@@ -10,6 +11,10 @@ type RevealStepProps = {
 
 export function RevealStep({ match }: RevealStepProps) {
   const archetype = getArchetype(match.archetype);
+
+  function persistHandoff() {
+    window.sessionStorage.setItem(revealHandoffStorageKey, JSON.stringify(match));
+  }
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
@@ -41,7 +46,7 @@ export function RevealStep({ match }: RevealStepProps) {
         </div>
 
         <div className="mt-8 flex justify-end">
-          <Link href="/moment" className="rounded-md bg-[var(--navy)] px-5 py-3 font-bold text-white">
+          <Link href={{ pathname: "/moment" }} onClick={persistHandoff} className="rounded-md bg-[var(--navy)] px-5 py-3 font-bold text-white">
             Continue
           </Link>
         </div>

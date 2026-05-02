@@ -1,4 +1,5 @@
 import archetypeLookup from '@/data/archetype-lookup.json';
+import { quizAnswersToVector } from '@/lib/quiz';
 import type { ArchetypeId, ArchetypeMatch, UserInput } from '@/lib/types';
 
 const CENTROIDS: Record<ArchetypeId, { heightCm: number; weightKg: number }> = {
@@ -35,14 +36,6 @@ export function centroidFallback(input: UserInput): ArchetypeMatch {
   const archetypeId = nearestCentroid(input.heightCm, input.weightKg);
   const lookup = archetypeLookup.archetypes[archetypeId];
 
-  const quizVector = [
-    input.quiz.teamVsSolo,
-    input.quiz.enduranceVsExplosive,
-    input.quiz.precisionVsPower,
-    input.quiz.waterVsLand,
-    input.quiz.strategistVsReactor,
-  ];
-
   return {
     archetype: archetypeId,
     sports: lookup.sports,
@@ -52,7 +45,7 @@ export function centroidFallback(input: UserInput): ArchetypeMatch {
       `Profiles with these measurements have historically appeared near Team USA's ${lookup.sports.olympic} and ${lookup.sports.paralympic} families.`,
       `Your quiz responses could align with training patterns common across this sport archetype.`,
     ],
-    quizVector,
+    quizVector: quizAnswersToVector(input.quiz),
     confidence: 0.5,
     isFallback: true,
   };

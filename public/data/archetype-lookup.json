@@ -18,7 +18,13 @@
         "weightKg": 84,
         "wingspanCm": 196
       },
-      "quizBias": [1, 0.25, 0.35, 0.2, 0.25],
+      "quizBias": [
+        1,
+        0.25,
+        0.35,
+        0.2,
+        0.25
+      ],
       "aggregateFacts": [
         "Court-based Team USA pathways often reward spatial reads, repeat acceleration, and coordinated timing.",
         "The paired Paralympic and Olympic court sports share tactical spacing while expressing movement through different mechanics."
@@ -28,7 +34,11 @@
         "This pairing keeps wheelchair basketball and basketball side by side as equal expressions of spacing, timing, and touch.",
         "The Striker may be associated with movement that turns small openings into decisive chances.",
         "Across Team USA history, court sports have often made teamwork visible through quick, repeatable choices."
-      ]
+      ],
+      "aggregateCounts": {
+        "olympicRosterRows": 0,
+        "paralympicRosterRows": 0
+      }
     },
     {
       "id": "flow",
@@ -43,7 +53,13 @@
         "weightKg": 76,
         "wingspanCm": 188
       },
-      "quizBias": [0.2, 1, 0.35, 0.4, 0.2],
+      "quizBias": [
+        0.2,
+        1,
+        0.35,
+        0.4,
+        0.2
+      ],
       "aggregateFacts": [
         "Aquatic Team USA pathways often center rhythm, body line, and repeat power.",
         "The Paralympic and Olympic swim pairing gives equal analytical depth to pace, water feel, and controlled momentum."
@@ -53,7 +69,11 @@
         "This pairing treats para swimming and swimming as parallel studies in pace, line, and adaptation.",
         "The Flow may be associated with calm repetition under pressure.",
         "Team USA aquatic history offers a deep lane for stories about breath, timing, and sustained speed."
-      ]
+      ],
+      "aggregateCounts": {
+        "olympicRosterRows": 0,
+        "paralympicRosterRows": 0
+      }
     },
     {
       "id": "spring",
@@ -68,7 +88,13 @@
         "weightKg": 72,
         "wingspanCm": 179
       },
-      "quizBias": [0.25, 0.25, 1, 0.45, 0.15],
+      "quizBias": [
+        0.25,
+        0.25,
+        1,
+        0.45,
+        0.15
+      ],
       "aggregateFacts": [
         "Sprint pathways often emphasize acceleration, stiffness, turnover, and finish-line composure.",
         "The Paralympic and Olympic sprint pairing keeps explosive track movement structurally balanced."
@@ -78,7 +104,11 @@
         "This pairing puts para athletics sprint and track sprint in the same spotlight for power, timing, and control.",
         "The Spring may be associated with starts that convert patience into speed.",
         "Team USA sprint stories often turn a fraction of a second into a full-body decision."
-      ]
+      ],
+      "aggregateCounts": {
+        "olympicRosterRows": 0,
+        "paralympicRosterRows": 0
+      }
     },
     {
       "id": "aim",
@@ -93,7 +123,13 @@
         "weightKg": 68,
         "wingspanCm": 174
       },
-      "quizBias": [0.1, 0.3, 0.15, 1, 0.25],
+      "quizBias": [
+        0.1,
+        0.3,
+        0.15,
+        1,
+        0.25
+      ],
       "aggregateFacts": [
         "Precision pathways often reward stillness, repeatable setup, and calm execution.",
         "The para archery and archery pairing highlights control and focus with equivalent visual importance."
@@ -103,7 +139,11 @@
         "This pairing gives para archery and archery equal weight as sports of setup, hold, and release.",
         "The Aim may be associated with pressure management and repeatable mechanics.",
         "Team USA precision stories often live in the quiet seconds before motion."
-      ]
+      ],
+      "aggregateCounts": {
+        "olympicRosterRows": 0,
+        "paralympicRosterRows": 0
+      }
     },
     {
       "id": "launch",
@@ -118,7 +158,13 @@
         "weightKg": 103,
         "wingspanCm": 196
       },
-      "quizBias": [0.35, 0.15, 0.3, 0.25, 1],
+      "quizBias": [
+        0.35,
+        0.15,
+        0.3,
+        0.25,
+        1
+      ],
       "aggregateFacts": [
         "Throwing pathways often center leverage, ground force, and controlled release.",
         "The para throws and Olympic throws pairing keeps power events represented with equal depth."
@@ -128,7 +174,17 @@
         "This pairing treats para shot put and Olympic throws as equal studies in leverage, rotation, and release.",
         "The Launch may be associated with patient setup and sudden transfer.",
         "Team USA throwing stories often make strength visible as timing, not just size."
-      ]
+      ],
+      "aggregateCounts": {
+        "olympicRosterRows": 0,
+        "paralympicRosterRows": 0
+      }
     }
-  ]
+  ],
+  "etl": {
+    "rawFilesRead": 0,
+    "teamUsaRows": 0,
+    "athleteNamesExtracted": 0,
+    "generatedAt": "2026-05-02T19:13:26.001Z"
+  }
 }

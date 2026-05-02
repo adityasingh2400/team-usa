@@ -5,8 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "compliance:lint": "node scripts/compliance-lint.mjs",
+    "etl:build": "node etl/scripts/build-archetype-lookup.mjs",
+    "gemini:smoke": "node scripts/gemini-smoke.mjs",
     "start": "next start",
     "lint": "eslint .",
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "smoke:onboarding": "PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test tests/onboarding-smoke.spec.ts --project=chromium",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -20,12 +25,14 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "^22.14.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.25.1",
     "eslint-config-next": "^15.3.0",
+    "exceljs": "^4.4.0",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"

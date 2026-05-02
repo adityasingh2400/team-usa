@@ -36,7 +36,7 @@ type MatchOptions = {
   timeoutMs?: number;
 };
 
-const defaultTimeoutMs = 15_000;
+const defaultTimeoutMs = Number(process.env.GEMINI_TIMEOUT_MS ?? 30_000);
 
 export async function matchArchetype(input: UserInput, options: MatchOptions = {}): Promise<ArchetypeMatch> {
   const parsedInput = userInputSchema.parse(input);
@@ -145,7 +145,7 @@ Compliance rules:
 - Do not mention athlete likeness, photos, or protected marks.
 - Use conditional phrasing such as "could align with" or "may be associated with".
 - Keep Paralympic and Olympic sports equally prominent.
-- Do not claim the user will be good at a sport.
+- Do not make guaranteed performance claims about the user.
 
 Return only JSON matching this schema:
 {

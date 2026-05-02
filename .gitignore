@@ -5,6 +5,8 @@ node_modules/
 dist/
 build/
 .next/
+.cache/
+.gstack/
 .venv/
 __pycache__/
 *.pyc
@@ -15,3 +17,5 @@ data/private/
 etl/raw/
 etl/interim/
 .compliance/
+test-results/
+playwright-report/

@@ -10,6 +10,7 @@ data stay aggregate-only.
 
 ## Current App
 
+- Live Cloud Run demo: https://become-team-usa-822611143160.us-central1.run.app
 - Next.js 15 App Router, React 19, TypeScript strict, Tailwind 4.
 - Vibe quiz with typed config in `lib/quiz.ts`.
 - Measurement input with metric/imperial conversion and validation.
