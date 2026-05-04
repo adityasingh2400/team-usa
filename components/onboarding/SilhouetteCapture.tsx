@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClientUserInput } from "@/lib/types";
 
 type PoseLandmark = {
@@ -26,21 +26,56 @@ export function SilhouetteCapture({ onBack, onComplete }: SilhouetteCaptureProps
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const poseLandmarkerRef = useRef<PoseLandmarkerHandle | null>(null);
+  const animFrameRef = useRef<number | null>(null);
   const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [silhouettePng, setSilhouettePng] = useState<string | undefined>();
   const [captureError, setCaptureError] = useState<string | null>(null);
 
+  const stopLoop = useCallback(() => {
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+  }, []);
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }
+
   useEffect(() => {
     return () => {
+      stopLoop();
       stopCamera();
       poseLandmarkerRef.current?.close();
     };
+  }, [stopLoop]);
+
+  const runDrawLoop = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    const landmarker = poseLandmarkerRef.current;
+
+    if (video && canvas && ctx && landmarker && video.readyState >= 2) {
+      const w = video.videoWidth || 720;
+      const h = video.videoHeight || 720;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      ctx.clearRect(0, 0, w, h);
+      const result = landmarker.detectForVideo(video, performance.now());
+      const lms = result.landmarks?.[0];
+      if (lms) drawLiveOutline(ctx, lms, w, h);
+    }
+
+    animFrameRef.current = requestAnimationFrame(runDrawLoop);
   }, []);
 
   async function startCamera() {
     setCameraState("loading");
     setCaptureError(null);
-
     try {
       poseLandmarkerRef.current = await createPoseLandmarker();
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -53,49 +88,51 @@ export function SilhouetteCapture({ onBack, onComplete }: SilhouetteCaptureProps
         await videoRef.current.play();
       }
       setCameraState("ready");
+      animFrameRef.current = requestAnimationFrame(runDrawLoop);
     } catch {
       stopCamera();
       setCameraState("denied");
     }
   }
 
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-  }
-
   async function captureSilhouette() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    const poseLandmarker = poseLandmarkerRef.current;
-    if (!video || !canvas || !context || !poseLandmarker) {
-      return;
-    }
+    const landmarker = poseLandmarkerRef.current;
+    if (!video || !canvas || !landmarker) return;
 
     setCameraState("capturing");
     setCaptureError(null);
+    stopLoop();
 
-    const width = video.videoWidth || 720;
-    const height = video.videoHeight || 720;
-    const result = poseLandmarker.detectForVideo(video, performance.now());
-    const landmarks = result.landmarks?.[0];
+    const w = video.videoWidth || 720;
+    const h = video.videoHeight || 720;
+    canvas.width = w;
+    canvas.height = h;
 
-    if (!landmarks) {
-      setCaptureError("Step back so your upper body is visible, then try the capture again.");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const result = landmarker.detectForVideo(video, performance.now());
+    const lms = result.landmarks?.[0];
+
+    if (!lms) {
+      setCaptureError("Step back so your full body is visible, then try again.");
       setCameraState("ready");
+      animFrameRef.current = requestAnimationFrame(runDrawLoop);
       return;
     }
 
-    canvas.width = width;
-    canvas.height = height;
-    drawAbstractSilhouette(context, landmarks, width, height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    drawCapturedSilhouette(ctx, lms, w, h);
 
-    const png = canvas.toDataURL("image/png");
-    setSilhouettePng(png);
+    setSilhouettePng(canvas.toDataURL("image/png"));
     setCameraState("captured");
     stopCamera();
   }
+
+  const isLive = cameraState === "ready" || cameraState === "loading" || cameraState === "capturing";
 
   return (
     <section className="surface p-5 md:p-8">
@@ -112,21 +149,35 @@ export function SilhouetteCapture({ onBack, onComplete }: SilhouetteCaptureProps
         </div>
 
         <div>
-          <div className="aspect-square overflow-hidden rounded-md border border-slate-200 bg-slate-100">
-            {cameraState === "ready" || cameraState === "loading" || cameraState === "capturing" ? (
-              <video ref={videoRef} className="h-full w-full scale-x-[-1] object-cover" muted playsInline />
+          <div className="relative aspect-square overflow-hidden rounded-md border border-slate-200 bg-slate-950">
+            {isLive ? (
+              <>
+                <video
+                  ref={videoRef}
+                  className="absolute inset-0 h-full w-full scale-x-[-1] object-cover opacity-20"
+                  muted
+                  playsInline
+                />
+                <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />
+              </>
             ) : silhouettePng ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={silhouettePng} alt="Captured abstract silhouette" className="h-full w-full object-cover" />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={silhouettePng} alt="Captured silhouette" className="h-full w-full object-contain" />
+                <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+              </>
             ) : (
-              <div className="grid h-full place-items-center p-8 text-center text-slate-500">
-                <div>
-                  <div className="mx-auto h-28 w-20 rounded-t-full bg-slate-300" />
-                  <div className="mx-auto mt-2 h-32 w-32 rounded-t-[48px] bg-slate-300" />
+              <>
+                <div className="grid h-full place-items-center p-8 text-center">
+                  <div>
+                    <div className="mx-auto h-28 w-20 rounded-t-full bg-slate-800" />
+                    <div className="mx-auto mt-2 h-32 w-32 rounded-t-[48px] bg-slate-800" />
+                    <p className="mt-4 text-sm text-slate-500">Enable camera to see your silhouette</p>
+                  </div>
                 </div>
-              </div>
+                <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+              </>
             )}
-            <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
           </div>
 
           {cameraState === "denied" ? (
@@ -142,12 +193,12 @@ export function SilhouetteCapture({ onBack, onComplete }: SilhouetteCaptureProps
             </button>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              {cameraState === "idle" || cameraState === "denied" ? (
+              {(cameraState === "idle" || cameraState === "denied") && (
                 <button type="button" className="rounded-md border border-slate-300 px-5 py-3 font-bold" onClick={startCamera}>
                   Use camera
                 </button>
-              ) : null}
-              {cameraState === "ready" || cameraState === "capturing" ? (
+              )}
+              {(cameraState === "ready" || cameraState === "capturing") && (
                 <button
                   type="button"
                   disabled={cameraState === "capturing"}
@@ -156,7 +207,7 @@ export function SilhouetteCapture({ onBack, onComplete }: SilhouetteCaptureProps
                 >
                   {cameraState === "capturing" ? "Capturing..." : "Capture"}
                 </button>
-              ) : null}
+              )}
               <button
                 type="button"
                 className="rounded-md bg-[var(--navy)] px-5 py-3 font-bold text-white"
@@ -182,7 +233,6 @@ async function createPoseLandmarker(): Promise<PoseLandmarkerHandle> {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm"
   );
-
   return PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
@@ -194,79 +244,111 @@ async function createPoseLandmarker(): Promise<PoseLandmarkerHandle> {
   });
 }
 
-function drawAbstractSilhouette(
-  context: CanvasRenderingContext2D,
-  landmarks: PoseLandmark[],
-  width: number,
-  height: number
-) {
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, width, height);
-  context.lineCap = "round";
-  context.lineJoin = "round";
-
-  const point = (index: number) => {
-    const landmark = landmarks[index];
-    if (!landmark || (landmark.visibility ?? 1) < 0.35) {
-      return null;
-    }
-
-    return {
-      x: (1 - landmark.x) * width,
-      y: landmark.y * height
-    };
-  };
-
-  const leftShoulder = point(11);
-  const rightShoulder = point(12);
-  const leftHip = point(23);
-  const rightHip = point(24);
-
-  context.strokeStyle = "#0a0a0a";
-  context.fillStyle = "#0a0a0a";
-
-  if (leftShoulder && rightShoulder && leftHip && rightHip) {
-    context.beginPath();
-    context.moveTo(leftShoulder.x, leftShoulder.y);
-    context.lineTo(rightShoulder.x, rightShoulder.y);
-    context.lineTo(rightHip.x, rightHip.y);
-    context.lineTo(leftHip.x, leftHip.y);
-    context.closePath();
-    context.fill();
-  }
-
-  drawLimb(context, point(11), point(13), point(15), width);
-  drawLimb(context, point(12), point(14), point(16), width);
-  drawLimb(context, point(23), point(25), point(27), width);
-  drawLimb(context, point(24), point(26), point(28), width);
-
-  for (const index of [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
-    const current = point(index);
-    if (!current) {
-      continue;
-    }
-    context.beginPath();
-    context.arc(current.x, current.y, Math.max(7, width * 0.012), 0, Math.PI * 2);
-    context.fill();
-  }
+// Returns a landmark's canvas position with x flipped to match the mirrored video
+function pt(lms: PoseLandmark[], i: number, w: number, h: number, minVis = 0.35) {
+  const lm = lms[i];
+  if (!lm || (lm.visibility ?? 1) < minVis) return null;
+  return { x: (1 - lm.x) * w, y: lm.y * h };
 }
 
-function drawLimb(
-  context: CanvasRenderingContext2D,
-  start: { x: number; y: number } | null,
-  middle: { x: number; y: number } | null,
-  end: { x: number; y: number } | null,
-  width: number
-) {
-  if (!start || !middle || !end) {
-    return;
+function estimateHeadRadius(lms: PoseLandmark[], w: number, h: number): { cx: number; cy: number; r: number } | null {
+  const nose = pt(lms, 0, w, h, 0.2);
+  if (!nose) return null;
+  const lEar = pt(lms, 7, w, h, 0.2);
+  const rEar = pt(lms, 8, w, h, 0.2);
+  const r =
+    lEar && rEar
+      ? Math.hypot(lEar.x - rEar.x, lEar.y - rEar.y) * 0.55
+      : w * 0.07;
+  return { cx: nose.x, cy: nose.y - r * 0.25, r };
+}
+
+// Live overlay: glowing white outline strokes on transparent background
+function drawLiveOutline(ctx: CanvasRenderingContext2D, lms: PoseLandmark[], w: number, h: number) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.lineWidth = Math.max(5, w * 0.013);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.shadowColor = "rgba(160, 255, 210, 0.65)";
+  ctx.shadowBlur = 16;
+
+  const head = estimateHeadRadius(lms, w, h);
+  if (head) {
+    ctx.beginPath();
+    ctx.arc(head.cx, head.cy, head.r, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
-  context.lineWidth = Math.max(14, width * 0.035);
-  context.beginPath();
-  context.moveTo(start.x, start.y);
-  context.lineTo(middle.x, middle.y);
-  context.lineTo(end.x, end.y);
-  context.stroke();
+  const connections: [number, number][] = [
+    [11, 12], // across shoulders
+    [11, 23], [12, 24], // torso sides
+    [23, 24], // across hips
+    [11, 13], [13, 15], // left arm
+    [12, 14], [14, 16], // right arm
+    [23, 25], [25, 27], // left leg
+    [24, 26], [26, 28], // right leg
+  ];
+
+  for (const [a, b] of connections) {
+    const pa = pt(lms, a, w, h);
+    const pb = pt(lms, b, w, h);
+    if (!pa || !pb) continue;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// Captured silhouette: dark filled shapes on white background
+function drawCapturedSilhouette(ctx: CanvasRenderingContext2D, lms: PoseLandmark[], w: number, h: number) {
+  ctx.save();
+  ctx.fillStyle = "#0a1628";
+  ctx.strokeStyle = "#0a1628";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const g = (i: number) => pt(lms, i, w, h);
+
+  // Head
+  const head = estimateHeadRadius(lms, w, h);
+  if (head) {
+    ctx.beginPath();
+    ctx.arc(head.cx, head.cy, head.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Torso as filled quadrilateral
+  const ls = g(11), rs = g(12), lh = g(23), rh = g(24);
+  if (ls && rs && lh && rh) {
+    ctx.beginPath();
+    ctx.moveTo(ls.x, ls.y);
+    ctx.lineTo(rs.x, rs.y);
+    ctx.lineTo(rh.x, rh.y);
+    ctx.lineTo(lh.x, lh.y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Limbs as thick rounded strokes (round caps create capsule-shaped segments)
+  ctx.lineWidth = Math.max(18, w * 0.042);
+  const limbs: [number, number][] = [
+    [11, 13], [13, 15],
+    [12, 14], [14, 16],
+    [23, 25], [25, 27],
+    [24, 26], [26, 28],
+  ];
+  for (const [a, b] of limbs) {
+    const pa = g(a), pb = g(b);
+    if (!pa || !pb) continue;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
